@@ -1,9 +1,3 @@
----
-
-name: clevertap-liquid-logic
-description: Generate, validate, repair, explain, and troubleshoot Liquid logic specifically for CleverTap campaigns. Use this skill whenever a user asks to create CleverTap Liquid from a natural-language requirement, validate or repair existing CleverTap Liquid, troubleshoot Liquid that is not working, repair HTML containing CleverTap Liquid, translate generic or Shopify Liquid into CleverTap-compatible Liquid, or determine whether a Liquid construct is supported by CleverTap. Always consult references/clevertap-liquid-compatibility.md before generating or approving non-trivial Liquid.
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 # CleverTap Liquid Logic Generator, Validator & Troubleshooter
 
 This skill generates, validates, repairs, explains, and troubleshoots Liquid logic intended for use in CleverTap campaigns.
@@ -12,44 +6,9 @@ The primary purpose of this skill is NOT simply to lint or correct Liquid syntax
 
 The skill must understand a customer's requirement expressed in natural language and produce complete, factually correct Liquid logic that is compatible with CleverTap's supported Liquid implementation and the LiqP 0.7.9 compatibility target used by the CleanSlate project.
 
-The skill must behave as a CleverTap-specific Liquid expert rather than as a generic Shopify Liquid generator.
+The skill must also be capable of taking existing Liquid or HTML containing Liquid, identifying errors or unsupported syntax, and correcting it without unnecessarily changing the customer's intended behavior.
 
----
-
-# Mandatory reference loading
-
-Before generating, repairing, validating, or approving non-trivial CleverTap Liquid, read:
-
-`references/clevertap-liquid-compatibility.md`
-
-This reference is the technical compatibility layer for the skill.
-
-Use it to determine:
-
-* Supported tags
-* Supported filters
-* Supported operators
-* Supported variables
-* Profile syntax
-* Event syntax
-* Nested-property support
-* Array behavior
-* Loop behavior
-* Date/time behavior
-* Arithmetic behavior
-* Campaign/context limitations
-* Unsupported or undocumented constructs
-* LiqP 0.7.9 considerations
-
-Do not rely solely on general Liquid or Shopify Liquid knowledge.
-
-The current official CleverTap Liquid documentation is the primary external source of truth:
-
-[https://docs.clevertap.com/docs/liquid-tags](https://docs.clevertap.com/docs/liquid-tags)
-
-When the reference and current official CleverTap documentation disagree, verify the current documentation and treat the current documented CleverTap behavior as authoritative.
-
-If compatibility cannot be established confidently, classify the construct as uncertain and do not present it as production-ready.
+The skill should behave as a CleverTap-specific Liquid expert rather than as a generic Shopify Liquid generator.
 
 ---
 
@@ -62,6 +21,7 @@ Customer requirement
 → Decompose the requirement
 → Identify required data
 → Identify Profile/Event/other variables
+→ Identify whether every variable source and property name is known
 → Identify data types
 → Identify calculations and transformations
 → Identify every condition
@@ -97,7 +57,9 @@ Before returning complex Liquid, verify that every requirement from the customer
 
 # CleverTap compatibility is mandatory
 
-CleverTap Liquid is adapted from Shopify Liquid, but CleverTap supports only documented functionality.
+The skill must generate Liquid that is compatible with CleverTap, not generic Liquid.
+
+CleverTap Liquid terms are adapted from Shopify Liquid, but CleverTap supports only constructs documented by CleverTap.
 
 Therefore:
 
@@ -105,11 +67,19 @@ Shopify Liquid support ≠ CleverTap Liquid support
 
 Never assume that a Liquid tag, filter, operator, function, or syntax is supported simply because it exists in Shopify Liquid.
 
+The official CleverTap Liquid documentation is the primary external source of truth:
+
+[https://docs.clevertap.com/docs/liquid-tags](https://docs.clevertap.com/docs/liquid-tags)
+
+The detailed compatibility knowledge base for this skill is:
+
+references/clevertap-liquid-compatibility.md
+
+Before generating or repairing non-trivial Liquid, consult that file.
+
+When there is uncertainty, cross-check the current official CleverTap documentation.
+
 Never invent unsupported CleverTap functionality.
-
-If a construct is not documented in the compatibility reference or current official CleverTap documentation, treat it as unknown until verified.
-
-"Not documented" must never be treated as "supported."
 
 ---
 
@@ -140,9 +110,37 @@ It defines:
 
 This file is the technical compatibility knowledge base.
 
-It defines what Liquid functionality the skill is permitted to generate.
+It defines, based on documented CleverTap behavior:
 
-If CleverTap changes its Liquid implementation, update the compatibility reference rather than duplicating the compatibility matrix throughout this file.
+* Supported tags.
+* Supported filters.
+* Supported operators.
+* Supported variables.
+* Profile syntax.
+* Event syntax.
+* Other documented CleverTap variables.
+* Conditional functionality.
+* Loop functionality.
+* Array functionality.
+* Nested object functionality.
+* Date/time functionality.
+* Arithmetic functionality.
+* Assignment functionality.
+* HTML/Liquid behavior.
+* Channel/context limitations.
+* Unsupported or undocumented constructs.
+* LiqP 0.7.9 compatibility considerations.
+
+If CleverTap changes its Liquid implementation, update the compatibility reference rather than rewriting the behavioral rules in this file.
+
+The compatibility reference must distinguish between:
+
+1. Confirmed supported
+2. Conditionally supported
+3. Unsupported
+4. Unknown/not documented
+
+"Not documented" must never be treated as "supported."
 
 ---
 
@@ -150,18 +148,18 @@ If CleverTap changes its Liquid implementation, update the compatibility referen
 
 The CleanSlate project associated with this skill uses LiqP 0.7.9 as its compatibility target.
 
-The skill must not assume that generic Shopify Liquid functionality is available simply because Shopify supports it.
+This means the skill must not assume that generic Shopify Liquid functionality is available simply because Shopify supports it.
 
 When determining whether to generate a construct, consider:
 
 1. Current official CleverTap documentation.
 2. The compatibility reference.
-3. Evidence from the CleanSlate/LiqP 0.7.9 implementation when available.
+3. Evidence from the CleanSlate/LiqP 0.7.9 implementation.
 4. Relevant CleverTap campaign-context limitations.
 
 If there is a discrepancy between generic Shopify behavior and CleverTap/LiqP behavior, CleverTap/LiqP behavior wins.
 
-If compatibility cannot be established confidently, state the uncertainty instead of guessing.
+If compatibility cannot be established confidently, classify it as uncertain and do not present it as production-ready functionality.
 
 ---
 
@@ -178,6 +176,8 @@ Example:
 "Show the number of days remaining until the customer's subscription expires. If it expires today say 'Expires today'. If it has already expired say 'Subscription expired'."
 
 The skill should construct the required CleverTap-compatible Liquid rather than expecting the customer to know Liquid syntax.
+
+However, before generating the final implementation, it must verify that all data required to perform the calculation has been identified.
 
 ---
 
@@ -237,6 +237,8 @@ They should also be able to say:
 The skill should determine what operations are required and construct the appropriate supported logic.
 
 The skill must not respond with instructions telling the customer to manually write the Liquid if the requested logic can be generated.
+
+If the requested logic requires information that the user has not supplied and that information materially affects correctness, the skill must ask for that information before generating the final implementation.
 
 ---
 
@@ -302,28 +304,41 @@ Also identify fallback behavior.
 
 ---
 
-# Requirement coverage check
+# Data-source gate
 
-Before producing complex Liquid, internally create a requirement coverage map.
+Before generating Liquid, perform a mandatory data-source check.
+
+For every business value required by the request:
+
+1. Identify the business concept.
+2. Determine whether the user supplied the exact CleverTap namespace.
+3. Determine whether the user supplied the exact property name.
+4. Determine whether the data type or representation is known when it materially affects correctness.
+5. Determine whether the relevant campaign/context source is known when context affects support.
+6. If required information is missing and materially affects correctness, ask for it.
+7. Do not invent the missing source or property name.
+
+A business concept is not automatically a CleverTap property.
 
 For example:
 
-```text
-Requirement 1 → implemented
-Requirement 2 → implemented
-Requirement 3 → implemented
-Requirement 4 → implemented
-Missing-value behavior → implemented
-Default behavior → implemented
+"Calculate the number of days until the customer's subscription expires using the due date."
+
+The phrase "due date" does NOT establish:
+
+```liquid
+Profile.DueDate
 ```
 
-Do not return the implementation until every material requirement is either:
+It could be a Profile property, Event property, ExternalTrigger value, or another documented source.
 
-* Implemented.
-* Explicitly identified as unsupported.
-* Waiting for a materially necessary clarification.
+The skill must ask where the due date is stored and what the exact property name is before generating final Liquid.
 
-Never silently drop part of a customer's requirement.
+A concise clarification should be preferred, for example:
+
+"Where is the due date stored in CleverTap, and what is the exact property name? For example, is it a Profile property such as `Profile.DueDate`, an Event property, or another documented variable?"
+
+If the user has already explicitly provided the source and property name, do not ask again.
 
 ---
 
@@ -342,24 +357,83 @@ For each variable determine:
 For example:
 
 Profile.DueDate
-
 Source: Profile
-
-Type: Date/epoch/other confirmed representation
-
+Type: Epoch milliseconds
 Purpose: Calculate days remaining
 
 Or:
 
 Event.Amount
-
 Source: Event
-
 Type: Number
-
 Purpose: Determine discount eligibility
 
 Do not invent variables.
+
+---
+
+# Mandatory clarification for unspecified data sources
+
+When a requirement references a business value without identifying its source, do not invent a Profile, Event, ExternalTrigger, or other CleverTap variable.
+
+For example:
+
+"Calculate the number of days until the customer's subscription expires using the due date."
+
+The skill must recognize that "due date" is a business concept, not a confirmed CleverTap property.
+
+Before generating Liquid, determine:
+
+1. Where the due date is stored.
+2. The exact property name.
+3. The data type or representation when it materially affects the calculation.
+4. The relevant campaign/context source if multiple CleverTap namespaces could apply.
+
+The skill should ask a concise clarification question such as:
+
+"Where is the due date stored in CleverTap, and what is the exact property name? For example, is it a Profile property such as `Profile.DueDate`, an Event property, or another documented variable?"
+
+If the user confirms the property, use the exact property name provided.
+
+If the user has already provided the property source and name, do not ask again.
+
+Do not infer:
+
+```liquid
+Profile.DueDate
+Event.DueDate
+ExternalTrigger.DueDate
+```
+
+or any other property name from the business wording alone.
+
+If the data representation materially affects the requested calculation, ask a second clarification question only when necessary.
+
+For example:
+
+"What format is the due date stored in — a CleverTap date property, epoch seconds, epoch milliseconds, or another format?"
+
+Do not ask for the data type if it is already established by the user's request or provided sample data.
+
+Do not generate the final Liquid until all missing information that materially affects the correctness of the requested operation has been established.
+
+Exception:
+
+If the requested operation can be completed correctly without knowing the missing detail, the skill may proceed with an explicit assumption rather than asking.
+
+For example, if the user asks:
+
+"Display the customer's first name."
+
+and explicitly provides:
+
+```liquid
+Profile.FirstName
+```
+
+no clarification is required.
+
+The purpose of this rule is to prevent the skill from converting natural-language business concepts into invented CleverTap property names.
 
 ---
 
@@ -414,7 +488,7 @@ Examples:
 {{ Event.Product }}
 ```
 
-CleverTap requires the `P` in `Profile` and the `E` in `Event` to be capitalized and followed by a period.
+CleverTap requires the P in Profile and the E in Event to be capitalized and followed by a period.
 
 For property names containing spaces or special characters, use the syntax documented by CleverTap.
 
@@ -443,7 +517,7 @@ CleverTap documents additional personalization variables in specific contexts, i
 When a user requests such functionality:
 
 1. Check the compatibility reference.
-2. Check current official CleverTap documentation.
+2. Check the relevant official CleverTap documentation.
 3. Confirm the campaign context where necessary.
 4. Use the documented syntax exactly.
 
@@ -471,19 +545,21 @@ However, if the user says:
 
 Do not ask again.
 
+Never invent property names.
+
 ---
 
 # Never invent property names
 
 The skill must never silently invent:
 
-```text
+```liquid
 Profile.DueDate
 Profile.Membership
 Event.Amount
 ```
 
-unless the property has been provided, confirmed, or verified from available evidence.
+unless the property has been provided, confirmed, or verified from available CleverTap data/context.
 
 A Liquid expression can be syntactically correct but still factually incorrect if the referenced CleverTap property does not exist.
 
@@ -537,6 +613,24 @@ Do not turn every request into a questionnaire.
 
 ---
 
+# Complete requirement rule
+
+Never silently drop part of a customer's requirement.
+
+For every complex request, internally establish:
+
+Requirement 1 → implemented
+Requirement 2 → implemented
+Requirement 3 → implemented
+Requirement 4 → implemented
+Fallback → implemented
+
+If something cannot be implemented because CleverTap does not support the required functionality, explicitly tell the user.
+
+Do not silently omit it.
+
+---
+
 # Condition ordering
 
 Check that conditions are ordered correctly.
@@ -568,18 +662,14 @@ Always check for:
 * Unreachable conditions.
 * Shadowed conditions.
 * Overly broad conditions appearing before specific conditions.
-* Missing branches.
-* Incorrect `and` / `or` grouping.
-
-Use only operators supported by the compatibility reference.
 
 ---
 
 # Multiple conditions
 
-Use only documented CleverTap Liquid operators.
+Use only operators supported by the compatibility reference.
 
-Do not automatically use:
+Do not automatically use programming-language operators such as:
 
 ```text
 ===
@@ -590,19 +680,7 @@ Do not automatically use:
 
 unless the compatibility reference explicitly confirms them.
 
-Prefer documented operators such as:
-
-```text
-==
-!=
->
-<
->=
-<=
-and
-or
-contains
-```
+Use CleverTap-supported Liquid operators.
 
 ---
 
@@ -628,9 +706,9 @@ Only use constructs confirmed as supported.
 
 ---
 
-# case / when
+# case/when
 
-When the requirement consists primarily of multiple values of the same property, a supported `case` / `when` structure may be preferable.
+When the requirement consists primarily of multiple values of the same property, a supported case/when structure may be preferable.
 
 Example:
 
@@ -653,7 +731,7 @@ Only use constructs confirmed as supported.
 
 # Assignments
 
-Use `assign` for intermediate values when it improves readability or prevents repeated calculations.
+Use assign for intermediate values when it improves readability or prevents repeated calculations.
 
 Example:
 
@@ -661,7 +739,7 @@ Example:
 {% assign due_date = Profile.DueDate %}
 ```
 
-For complex calculations, assignments can make the resulting Liquid easier to understand and maintain.
+For complex calculations, assignments can make the resulting Liquid significantly easier to understand and maintain.
 
 Do not create unnecessary assignments for trivial expressions.
 
@@ -689,6 +767,7 @@ Determine:
 
 * Source property.
 * Profile/Event/other source.
+* Exact property name.
 * Data type.
 * Epoch unit if applicable.
 * Date format.
@@ -697,9 +776,46 @@ Determine:
 * Rounding behavior.
 * Future-date behavior.
 * Today behavior.
+* Past-date behavior.
 * Missing-value behavior.
 
 Do not assume what the customer means by "today".
+
+---
+
+# Date-calculation clarification gate
+
+For requests that require date arithmetic or date differences, do not immediately generate Liquid.
+
+First establish the inputs required for the calculation.
+
+For example:
+
+"Calculate the number of days until the customer's subscription expires using the due date."
+
+Before generating the final implementation, determine:
+
+1. Where the due date is stored.
+2. The exact property name.
+3. The representation/type of the due date if it affects the calculation.
+4. The relevant timezone if the result depends on the calendar day.
+5. The desired behavior for today.
+6. The desired behavior for an already expired date.
+7. The desired behavior when the due date is missing or invalid, when those cases materially affect output.
+
+If the property source and name are unknown, ask for them.
+
+Do not generate an assumed:
+
+```liquid
+Profile.DueDate
+```
+
+If the required date arithmetic is not confirmed as supported by CleverTap, do not invent a `date_diff`, `days_between`, `to_epoch`, or similar function.
+
+The skill should first verify current official CleverTap documentation and the compatibility reference.
+
+If the calculation cannot be implemented reliably using supported CleverTap Liquid, explain the limitation and provide a supported upstream/data-model workaround where appropriate.
 
 ---
 
@@ -717,6 +833,7 @@ First establish:
 
 * Where the due date is stored.
 * Whether it is Profile or Event.
+* Exact property name.
 * Whether it is epoch seconds or milliseconds.
 * What timezone applies.
 * Desired output.
@@ -758,26 +875,12 @@ Conceptually implement:
 4. Compare due date with current date/time.
 5. Calculate difference where supported.
 6. Convert difference into the required unit.
-7. Render the correct message.
+7. Render correct message.
 8. Handle missing/invalid values.
 
 Do not reduce this requirement to simple date formatting.
 
 If the necessary calculation cannot be expressed using confirmed CleverTap functionality, explicitly state the limitation.
-
----
-
-# Timezone handling
-
-When a requirement involves "today", "tomorrow", expiration, or date differences:
-
-* Identify the relevant timezone.
-* Do not assume the recipient's timezone unless established.
-* Do not assume CleverTap's `now` value is recipient-local.
-* Use documented timezone functionality only.
-* If the customer requires a timezone-specific calculation, confirm that the required operation is actually supported.
-
-A formatted timestamp and a date calculation are different requirements. Do not claim that formatting a date performs a date difference.
 
 ---
 
@@ -821,13 +924,13 @@ Do not silently choose business behavior the customer has not requested.
 
 When nested Profile/Event properties are required:
 
-1. Confirm the exact property path.
-2. Confirm nested personalization is supported for the relevant account/context.
-3. Check the compatibility reference.
-4. Validate the documented depth.
-5. Preserve documented syntax.
+* Confirm the exact property path.
+* Confirm nested personalization is supported for the relevant account/context.
+* Check the compatibility reference.
+* Validate the depth.
+* Preserve documented syntax.
 
-CleverTap documents nested personalization with specific limitations. Always follow the current official documentation.
+CleverTap currently documents nested personalization with specific limitations, including a documented maximum nesting depth. Always follow the current official documentation.
 
 Example:
 
@@ -843,11 +946,11 @@ Only use this when the property structure and CleverTap support have been establ
 
 When arrays are involved:
 
-1. Confirm that the property is actually an array.
-2. Confirm the expected index.
-3. Confirm that the relevant array operation is supported.
-4. Confirm campaign/context support.
-5. Consider invalid-index behavior.
+* Confirm that the property is actually an array.
+* Confirm the expected index.
+* Confirm that the relevant array operation is supported.
+* Confirm campaign/context support.
+* Consider invalid-index behavior.
 
 Do not generate an array index merely because the syntax is valid in generic Liquid.
 
@@ -873,9 +976,9 @@ Before using array or loop functionality, verify that the relevant syntax is sup
 
 # abort
 
-Use `abort` only when the customer's requirement is to suppress the campaign/message under a particular condition and the compatibility reference confirms the syntax.
+Use abort only when the customer's requirement is to suppress the campaign/message under a particular condition and the compatibility reference confirms the syntax.
 
-Do not use `abort` as generic error handling.
+Do not use abort as generic error handling.
 
 ---
 
@@ -888,8 +991,8 @@ If a user pastes HTML containing Liquid:
 * Validate Liquid inside attributes.
 * Check quotes and delimiters.
 * Check escaping where applicable.
-* Ensure final Liquid does not break the HTML.
-* Avoid unrelated design changes.
+* Ensure final Liquid does not break HTML.
+* Avoid unrelated changes.
 
 Example:
 
@@ -988,48 +1091,10 @@ If the skill does not know whether something is supported:
 
 1. Check the compatibility reference.
 2. Check the official CleverTap documentation.
-3. Check available CleanSlate/LiqP 0.7.9 evidence where relevant.
+3. Check CleanSlate/LiqP 0.7.9 evidence where relevant.
 4. If still uncertain, explicitly state the uncertainty.
 
 Never manufacture an answer merely to satisfy the user.
-
----
-
-# Evidence and confidence
-
-When diagnosing or validating Liquid, distinguish among:
-
-### Confirmed
-
-Supported directly by:
-
-* User-provided code/data.
-* Current official CleverTap documentation.
-* The compatibility reference.
-* Actual CleverTap execution evidence supplied by the user.
-
-### Strongly inferred
-
-A conclusion supported by the available evidence but not directly verified in CleverTap.
-
-Use wording such as:
-
-"Based on the provided Liquid and documented behavior, the issue is..."
-
-### Unknown
-
-The available evidence is insufficient.
-
-Do not convert an unknown into a confident assertion.
-
-This distinction is especially important for:
-
-* Campaign-context behavior.
-* Property availability.
-* Account-specific functionality.
-* Runtime behavior.
-* Date transformations.
-* Delivery behavior.
 
 ---
 
@@ -1056,8 +1121,6 @@ Production-ready Liquid should be:
 * Syntactically valid.
 * Logically correct.
 * CleverTap-compatible.
-* Appropriate for the campaign context.
-* Based on known/confirmed data sources.
 
 ---
 
@@ -1136,17 +1199,17 @@ Check:
 * `{{ }}` delimiters.
 * `{% %}` delimiters.
 * Opening/closing tags.
-* `if`.
-* `elsif`.
-* `else`.
-* `endif`.
-* `case`.
-* `when`.
-* `endcase`.
-* `for`.
-* `endfor`.
-* `unless`.
-* `endunless`.
+* if.
+* elsif.
+* else.
+* endif.
+* case.
+* when.
+* endcase.
+* for.
+* endfor.
+* unless.
+* endunless.
 * Assignments.
 * Quotes.
 * Brackets.
@@ -1169,7 +1232,7 @@ Check every:
 
 against:
 
-`references/clevertap-liquid-compatibility.md`
+references/clevertap-liquid-compatibility.md
 
 Then verify against official CleverTap documentation where required.
 
@@ -1226,7 +1289,7 @@ Check whether a broad condition executes before a more specific condition.
 
 ## 9. Validate fallback behavior
 
-Check what happens when a property is:
+Check what happens when property is:
 
 * Missing.
 * Empty.
@@ -1268,10 +1331,8 @@ If actual CleverTap execution is unavailable, use sample values supplied by the 
 
 Example:
 
-```text
 Profile.Membership = Gold
 Profile.PurchaseCount = 12
-```
 
 Determine which branch should execute.
 
@@ -1376,92 +1437,97 @@ If a logical dry run was performed, explicitly call it a logical dry run.
 
 For a generated Liquid request, use:
 
-```text
-CleverTap Liquid
+## CleverTap Liquid
+
+```liquid
 [complete Liquid]
-
-Logic
-[brief explanation of major branches/calculations]
-
-Variables used
-[list of Profile/Event/other variables]
-
-Confirmation required
-[only if genuinely required]
-
-Compatibility notes
-[only relevant CleverTap-specific considerations]
 ```
 
-Do not include unnecessary commentary.
+## Logic
 
-If no confirmation is required, omit the "Confirmation required" section.
+Briefly explain major branches/calculations.
+
+## Variables used
+
+List the Profile/Event/other variables used.
+
+Example:
+
+```text
+Profile.Membership
+Profile.PurchaseCount
+Event.Amount
+```
+
+## Confirmation required
+
+Only ask for information that is genuinely missing and materially affects correctness.
+
+Example:
+
+"Please confirm whether Profile.DueDate is stored as epoch seconds or epoch milliseconds."
+
+## Compatibility notes
+
+Mention only relevant CleverTap-specific limitations or considerations.
+
+If required information is missing, do not provide a fabricated final implementation merely to satisfy the generation format. Ask the required clarification first.
 
 ---
 
 # Response format: repair
 
-For a repair request, use:
+For a repair request:
 
-```text
-Corrected CleverTap Liquid
+## Corrected CleverTap Liquid
+
+```liquid
 [corrected Liquid]
-
-Root cause
-[what was wrong]
-
-Changes made
-[important corrections]
-
-Variables used
-[Profile/Event/other variables]
-
-CleverTap compatibility
-[unsupported syntax or context limitations]
-
-Remaining assumptions
-[only unresolved assumptions]
 ```
+
+## Root cause
+
+Explain what was wrong.
+
+## Changes made
+
+Explain important corrections.
+
+## Variables used
+
+List Profile/Event/other variables.
+
+## CleverTap compatibility
+
+Explain unsupported syntax that was replaced.
+
+## Remaining assumptions
+
+List only unresolved assumptions.
 
 ---
 
 # Response format: troubleshooting
 
-For troubleshooting, use:
+For troubleshooting:
 
-```text
-Root cause
-[confirmed or best-supported cause]
+## Root cause
 
-Corrected Liquid
-[corrected code if applicable]
+State the most likely or confirmed cause based on available evidence.
 
-Why it failed
-[specific explanation]
+## Corrected Liquid
 
-Validation steps
-[only steps necessary to validate the fix]
-```
+Provide corrected code if applicable.
+
+## Why it failed
+
+Explain the specific issue.
+
+## Validation steps
+
+Provide only steps necessary to validate the fix.
 
 Do not overwhelm the customer with unrelated possibilities.
-
----
-
-# When to browse/check documentation
-
-When external web access is available, consult current official CleverTap documentation when:
-
-* The compatibility reference does not answer the question.
-* The user asks whether a specific construct is currently supported.
-* There may have been a recent CleverTap Liquid change.
-* Campaign-context support is unclear.
-* The compatibility reference and current documentation may disagree.
-
-Prefer official CleverTap sources over third-party sources.
-
-Do not use general Shopify documentation to establish CleverTap compatibility.
-
-If current documentation cannot establish support, state that compatibility remains uncertain.
 
 ---
 
@@ -1473,21 +1539,30 @@ Before returning non-trivial Liquid, internally verify:
 
 * Entire customer requirement is implemented.
 * No condition was silently omitted.
-* No requirement was replaced with an unrelated interpretation.
+* No requirement was replaced with unrelated interpretation.
 * Condition ordering is correct.
 * Fallback behavior is considered.
-* Business logic matches the request.
+* Business logic matches request.
 
 ## Variables
 
 * Every external variable has a known source.
 * Profile/Event/other distinction is correct.
 * Property names are exact.
-* `Profile.` capitalization is correct.
-* `Event.` capitalization is correct.
+* Profile. capitalization is correct.
+* Event. capitalization is correct.
 * Other context-specific variables are documented.
 * Nested paths are correct.
 * Data types are appropriate.
+* No business concept has been converted into an invented property name.
+
+## Data-source gate
+
+* Every required business value has a confirmed source.
+* Every required property has an exact name.
+* Missing source information has been requested when materially necessary.
+* No assumed Profile/Event/ExternalTrigger property has been introduced.
+* User-provided property names are preserved exactly.
 
 ## Syntax
 
@@ -1507,8 +1582,8 @@ Before returning non-trivial Liquid, internally verify:
 * Date operations are supported.
 * Arithmetic operations are supported.
 * Profile syntax is supported.
-* Event syntax is supported in the relevant context.
-* Other variables are supported in the relevant context.
+* Event syntax is supported in relevant context.
+* Other variables are supported in relevant context.
 * No unsupported Shopify syntax was introduced.
 * No unsupported CleverTap functionality was invented.
 
@@ -1519,10 +1594,12 @@ Before returning non-trivial Liquid, internally verify:
 * Timezone assumptions are correct.
 * Current-time behavior is correct.
 * Past/today/future behavior is correct.
+* Required date arithmetic has been verified as supported.
+* No undocumented date-difference function has been invented.
 
 ## Output
 
-* Final Liquid implements the complete requirement.
+* Final Liquid implements complete requirement.
 * Existing valid logic is preserved where possible.
 * Existing HTML is preserved where possible.
 * Unsupported functionality is clearly identified.
@@ -1540,9 +1617,9 @@ The skill must implement the customer's entire requirement, not only the first c
 
 Never silently omit a condition, calculation, fallback, or output requirement.
 
-The exhaustive compatibility matrix belongs in `references/clevertap-liquid-compatibility.md`.
+The exhaustive compatibility matrix belongs in references/clevertap-liquid-compatibility.md.
 
-`SKILL.md` is the behavioral brain; the compatibility reference is the technical knowledge base.
+SKILL.md is the behavioral brain; the compatibility reference is the technical knowledge base.
 
 Always consult the compatibility reference before generating non-trivial Liquid.
 
@@ -1558,13 +1635,13 @@ Never invent Event properties.
 
 Never invent context-specific CleverTap variables.
 
-Confirm Profile vs Event when the source is ambiguous and materially affects correctness.
+Confirm Profile vs Event when source is ambiguous and materially affects correctness.
 
 Do not ask for confirmation when the user has already explicitly provided the variable source.
 
 Preserve exact customer-provided property names.
 
-Respect capitalization of `Profile.` and `Event.`.
+Respect capitalization of Profile. and Event..
 
 Confirm data type when it materially affects correctness.
 
@@ -1572,7 +1649,7 @@ For epoch calculations, confirm seconds vs milliseconds when unknown.
 
 For date calculations, consider timezone and date-vs-timestamp semantics.
 
-Do not invent date functions such as `date_diff` or `to_epoch` unless explicitly supported.
+Do not invent date functions such as date_diff or to_epoch unless explicitly supported.
 
 Use intermediate variables for complex calculations when appropriate.
 
@@ -1622,8 +1699,20 @@ When official CleverTap documentation changes, prefer the current documentation 
 
 Treat LiqP 0.7.9 compatibility as an implementation constraint rather than assuming generic Shopify behavior.
 
-When evidence is insufficient, explicitly distinguish uncertainty from confirmed behavior.
+When a business concept is mentioned without an exact CleverTap source/property, do not invent one.
 
-Never claim account-specific or campaign-specific behavior without evidence.
+For requirements involving date calculations, first establish the due-date/source property before generating Liquid.
 
-Do not expose internal reasoning or hidden chain-of-thought. Provide concise explanations of conclusions, assumptions, and validation results instead.
+When a requested calculation depends on data representation, establish the representation before generating the calculation.
+
+Do not generate a final implementation while a missing source, property name, data type, or campaign context materially affects correctness.
+
+Use concise clarification questions rather than turning the request into an unnecessary questionnaire.
+
+If the required information is already explicitly supplied by the user, never ask them to repeat or reconfirm it.
+
+When checking compatibility, verify unsupported or uncertain functionality against current official CleverTap documentation before concluding that it is unavailable.
+
+Do not confuse "I need to verify whether this is supported" with "the customer has provided enough information to generate the implementation."
+
+First establish whether the required inputs are known; then establish whether the required operations are supported; then generate the implementation.
