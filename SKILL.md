@@ -20,7 +20,6 @@ Customer requirement
 → Understand the complete requirement
 → Decompose the requirement
 → Identify required data
-→ Identify Profile/Event/other variables
 → Identify whether every variable source and property name is known
 → Identify data types
 → Identify calculations and transformations
@@ -95,6 +94,7 @@ It defines:
 
 * How the skill understands requirements.
 * How it asks clarification questions.
+* How it presents clarification questions as selectable options.
 * How it identifies variables.
 * How it generates Liquid.
 * How it repairs Liquid.
@@ -242,65 +242,195 @@ If the requested logic requires information that the user has not supplied and t
 
 ---
 
-# Requirement decomposition
+# Interactive clarification protocol
 
-Before generating complex Liquid, identify four conceptual components.
+When required information is missing, the skill must ask the customer for the missing information in an interactive, selectable format whenever the possible answers can reasonably be represented as a finite set of options.
 
-## Inputs
+Do NOT provide a long prose explanation followed by an open-ended request for the customer to type the answer when selectable options can be offered.
 
-Identify every value required.
+The preferred format is:
 
-Examples:
+**Where is the due date stored?**
 
-* Profile.Membership
-* Profile.PurchaseCount
-* Profile.DueDate
-* Event.Amount
-* ExternalTrigger.Price
-* ConstantEventProperty
+1. Profile property
+2. Event property
+3. External Trigger property
+4. Another CleverTap variable
+5. I'm not sure
 
-Do not invent a variable merely because its name would be convenient.
+The customer can respond with the option number or the corresponding option.
 
-## Transformations
+If the selected option requires an exact property name, follow up with a concise question asking for that property name.
 
-Identify what needs to happen to the data.
+For example:
 
-Examples:
+**What is the exact Profile property name?**
 
-* Convert a value.
-* Format a date.
-* Calculate a difference.
-* Perform arithmetic.
-* Assign an intermediate value.
-* Extract part of a string.
-* Split a string.
-* Iterate over an array.
+1. `Profile.DueDate`
+2. `Profile.SubscriptionEndDate`
+3. `Profile.ExpiryDate`
+4. Other — I'll provide the exact property name
 
-## Conditions
+Do not assume that one of the example property names exists merely because it is presented as an option.
 
-Identify every decision.
+Options must be presented as examples/selections, not as verified CleverTap properties.
 
-Examples:
+If the user selects "Other" or "I'm not sure", ask for the relevant information in a concise manner.
 
-* Membership equals Gold.
-* Purchase count is greater than 5.
-* Amount is greater than 1000.
-* Due date is before today.
-* Due date is today.
-* Due date is in the future.
+---
 
-## Output
+# One clarification at a time
 
-Identify exactly what the customer wants displayed or returned.
+When multiple pieces of information are missing, do not overwhelm the customer with a questionnaire.
 
-Examples:
+Ask the most fundamental missing question first.
 
-* "20% off"
-* "Due today"
-* "5 days remaining"
-* "Subscription expired"
+For example, for:
 
-Also identify fallback behavior.
+"Calculate the number of days until the customer's subscription expires using the due date."
+
+If the source of the due date is unknown, ask only:
+
+**Where is the due date stored?**
+
+1. Profile property
+2. Event property
+3. External Trigger property
+4. Another CleverTap variable
+5. I'm not sure
+
+After the customer answers, ask the next materially necessary question.
+
+For example, after selecting Profile property:
+
+**What is the exact Profile property name?**
+
+1. `Profile.DueDate`
+2. `Profile.SubscriptionEndDate`
+3. `Profile.ExpiryDate`
+4. Other — I'll provide the exact property name
+
+Only after the source and exact property are established should the skill ask about representation if it materially affects the calculation.
+
+For example:
+
+**What format is the due date stored in?**
+
+1. Date/datetime
+2. Unix epoch seconds
+3. Unix epoch milliseconds
+4. Text/string
+5. I'm not sure
+
+Do not ask questions whose answers do not materially affect the requested implementation.
+
+---
+
+# Clarification questions must be actionable
+
+A clarification question should make it obvious what the customer needs to select or provide.
+
+Prefer:
+
+**Where does `Amount` come from?**
+
+1. Triggering Event
+2. Profile property
+3. External Trigger
+4. I'm not sure
+
+Avoid:
+
+"Can you provide more context about Amount?"
+
+Prefer:
+
+**What should happen if the due date is missing?**
+
+1. Show a fallback message
+2. Do not send the message
+3. Show nothing
+4. Treat it as expired
+5. Other
+
+If the customer selects an option that requires a value, ask for that value in the next question.
+
+---
+
+# Clarification questions vs explanatory text
+
+The purpose of an interactive clarification is to obtain a decision from the customer.
+
+Do not substitute a long explanatory paragraph for the question.
+
+For example, this is incorrect behavior:
+
+"Due date could be a Profile property, Event property, or External Trigger. It could also be epoch seconds or milliseconds. CleverTap doesn't support date_diff..."
+
+followed by no actionable question.
+
+Instead:
+
+**Where is the due date stored?**
+
+1. Profile property
+2. Event property
+3. External Trigger property
+4. Other
+5. I'm not sure
+
+After the user selects the source, explain any relevant compatibility limitation and ask the next necessary question.
+
+Compatibility explanations may accompany a question, but must not replace the question.
+
+---
+
+# Do not generate final Liquid while required clarification is pending
+
+If the missing information materially affects correctness, do not provide a fabricated or placeholder implementation while asking the clarification.
+
+For example, if the user asks:
+
+"Calculate the number of days until the customer's subscription expires using the due date."
+
+and the due-date property is unknown, do NOT output:
+
+```liquid
+{{ Profile.DueDate | date_diff: "now" }}
+```
+
+Do NOT output:
+
+```liquid
+{% assign due_date = Profile.DueDate %}
+```
+
+Do NOT invent a placeholder property and present it as the final solution.
+
+Instead, ask the customer where the due date comes from.
+
+---
+
+# Clarification state
+
+Treat each customer response as an answer to the currently outstanding clarification.
+
+Once the customer selects an option:
+
+1. Record the selected source/behavior.
+2. Do not ask the same question again.
+3. Ask only the next missing materially relevant question.
+4. Continue until the implementation can be generated correctly.
+
+If the customer supplies the information directly in prose instead of selecting an option, accept it.
+
+For example:
+
+User:
+
+"The due date is Profile.SubscriptionEnd and it is epoch milliseconds."
+
+The skill must accept both facts and proceed without asking the same questions again.
 
 ---
 
@@ -315,7 +445,7 @@ For every business value required by the request:
 3. Determine whether the user supplied the exact property name.
 4. Determine whether the data type or representation is known when it materially affects correctness.
 5. Determine whether the relevant campaign/context source is known when context affects support.
-6. If required information is missing and materially affects correctness, ask for it.
+6. If required information is missing and materially affects correctness, ask for it using the interactive clarification protocol.
 7. Do not invent the missing source or property name.
 
 A business concept is not automatically a CleverTap property.
@@ -334,9 +464,15 @@ It could be a Profile property, Event property, ExternalTrigger value, or anothe
 
 The skill must ask where the due date is stored and what the exact property name is before generating final Liquid.
 
-A concise clarification should be preferred, for example:
+A concise clarification should preferably be interactive:
 
-"Where is the due date stored in CleverTap, and what is the exact property name? For example, is it a Profile property such as `Profile.DueDate`, an Event property, or another documented variable?"
+**Where is the due date stored in CleverTap?**
+
+1. Profile property
+2. Event property
+3. External Trigger property
+4. Another documented CleverTap variable
+5. I'm not sure
 
 If the user has already explicitly provided the source and property name, do not ask again.
 
@@ -356,7 +492,7 @@ For each variable determine:
 
 For example:
 
-Profile.DueDate
+Profile.SubscriptionEnd
 Source: Profile
 Type: Epoch milliseconds
 Purpose: Calculate days remaining
@@ -389,13 +525,26 @@ Before generating Liquid, determine:
 3. The data type or representation when it materially affects the calculation.
 4. The relevant campaign/context source if multiple CleverTap namespaces could apply.
 
-The skill should ask a concise clarification question such as:
+Use the interactive clarification protocol.
 
-"Where is the due date stored in CleverTap, and what is the exact property name? For example, is it a Profile property such as `Profile.DueDate`, an Event property, or another documented variable?"
+For example:
 
-If the user confirms the property, use the exact property name provided.
+**Where is the due date stored?**
 
-If the user has already provided the property source and name, do not ask again.
+1. Profile property
+2. Event property
+3. External Trigger property
+4. Another CleverTap variable
+5. I'm not sure
+
+After the source is selected:
+
+**What is the exact property name?**
+
+1. I'll provide the exact property name
+2. I'm not sure
+
+If the user provides the property name directly, use it exactly.
 
 Do not infer:
 
@@ -411,7 +560,13 @@ If the data representation materially affects the requested calculation, ask a s
 
 For example:
 
-"What format is the due date stored in — a CleverTap date property, epoch seconds, epoch milliseconds, or another format?"
+**What format is the due date stored in?**
+
+1. CleverTap date/datetime
+2. Unix epoch seconds
+3. Unix epoch milliseconds
+4. Text/string
+5. I'm not sure
 
 Do not ask for the data type if it is already established by the user's request or provided sample data.
 
@@ -461,7 +616,7 @@ Do NOT automatically invent:
 Profile.DueDate
 ```
 
-Instead, ask for the exact CleverTap property if the property name is unknown.
+Instead, ask for the exact CleverTap property using the interactive clarification protocol.
 
 If the customer explicitly provides:
 
@@ -529,15 +684,16 @@ Never invent a context-specific variable.
 
 If the user's requirement does not establish whether a property is a Profile property or Event property, ask when that distinction materially affects correctness.
 
+Use selectable options.
+
 For example:
 
-User:
+**Where should the purchase amount come from?**
 
-"Check the purchase amount."
-
-Ask:
-
-"Should the purchase amount come from the triggering Event, such as Event.Amount, or from a Profile property?"
+1. Triggering Event — for example `Event.Amount`
+2. Profile property
+3. External Trigger
+4. I'm not sure
 
 However, if the user says:
 
@@ -569,7 +725,7 @@ The goal is factual correctness, not merely syntactic correctness.
 
 # Data type confirmation
 
-When the data type affects the logic, confirm it.
+When the data type affects the logic, confirm it using selectable options where practical.
 
 Possible types include:
 
@@ -585,7 +741,13 @@ Possible types include:
 
 For example:
 
-"Is DueDate stored as Unix epoch seconds, Unix epoch milliseconds, or a formatted date string?"
+**What format is the due date stored in?**
+
+1. CleverTap date/datetime
+2. Unix epoch seconds
+3. Unix epoch milliseconds
+4. Text/string
+5. I'm not sure
 
 Do not guess when the distinction changes the calculation.
 
@@ -608,6 +770,8 @@ Ask a clarification question only when the missing information can materially ch
 If a reasonable implementation can be produced without the missing information, make the assumption explicit and proceed.
 
 If multiple interpretations would produce materially different Liquid, ask before generating the final implementation.
+
+Use the interactive clarification protocol whenever a finite set of meaningful choices exists.
 
 Do not turn every request into a questionnaire.
 
@@ -803,7 +967,57 @@ Before generating the final implementation, determine:
 6. The desired behavior for an already expired date.
 7. The desired behavior when the due date is missing or invalid, when those cases materially affect output.
 
-If the property source and name are unknown, ask for them.
+Do not ask all of these questions at once unless the user specifically requests a detailed configuration flow.
+
+Ask the highest-priority unanswered question first using selectable options.
+
+For example:
+
+**Where is the due date stored?**
+
+1. Profile property
+2. Event property
+3. External Trigger property
+4. Another CleverTap variable
+5. I'm not sure
+
+Then:
+
+**What is the exact property name?**
+
+1. I'll provide the exact property name
+2. I'm not sure
+
+Then, if required:
+
+**What format is the due date stored in?**
+
+1. CleverTap date/datetime
+2. Unix epoch seconds
+3. Unix epoch milliseconds
+4. Text/string
+5. I'm not sure
+
+Then, if timezone materially affects the requested result:
+
+**Which timezone should determine the calendar day?**
+
+1. IST — CleverTap's default `now` behavior
+2. Recipient/customer timezone
+3. A specific timezone — I'll provide it
+4. Use the campaign/account default
+5. I'm not sure
+
+Then, if today/past/missing behavior materially affects the output, ask the relevant question with selectable options rather than presenting a prose list.
+
+For example:
+
+**What should happen if the subscription expires today?**
+
+1. Show `Expires today`
+2. Show `0 days remaining`
+3. Treat it as expired
+4. Other
 
 Do not generate an assumed:
 
@@ -840,6 +1054,8 @@ First establish:
 * Past-date behavior.
 * Today behavior.
 * Missing-value behavior.
+
+Use selectable clarification options whenever practical.
 
 Then determine which operations are actually supported by CleverTap.
 
@@ -884,6 +1100,38 @@ If the necessary calculation cannot be expressed using confirmed CleverTap funct
 
 ---
 
+# Date-only comparison
+
+Some requirements do not require date arithmetic.
+
+For example:
+
+"Show 'Offer expires today' if the offer expires today; otherwise show the formatted expiry date."
+
+If the exact expiry-date source and property are already known, the skill may determine whether a same-day comparison can be implemented using supported date formatting.
+
+If the expiry-date source is unknown, ask for it first.
+
+For example:
+
+**Where is the offer expiry date stored?**
+
+1. Profile property
+2. Event property
+3. External Trigger property
+4. Another CleverTap variable
+5. I'm not sure
+
+After the source is known, ask for the exact property if necessary.
+
+If the data representation or timezone materially affects the comparison, ask those questions before generating the implementation.
+
+Do not invent a property such as `Profile.OfferExpiry`.
+
+Do not invent date arithmetic merely because the requirement mentions "today."
+
+---
+
 # Arithmetic
 
 Only use arithmetic functionality confirmed by the compatibility reference.
@@ -915,6 +1163,27 @@ When a required property may be missing or empty, consider:
 * Date is invalid.
 
 If fallback behavior materially changes the customer experience and has not been specified, ask the user.
+
+When a finite set of fallback behaviors can be offered, use selectable options.
+
+For example:
+
+**What should happen if the DeepLink is unavailable?**
+
+1. Use a specific fallback URL
+2. Use a generic landing-page URL
+3. Do not render the link
+4. Other — I'll provide the behavior
+
+If a URL is required:
+
+**What fallback URL should be used?**
+
+1. I'll provide the URL
+2. Use a URL already provided in the requirement
+3. No fallback URL
+
+Do not invent a business URL.
 
 Do not silently choose business behavior the customer has not requested.
 
@@ -1001,6 +1270,18 @@ Example:
 ```
 
 should not be rewritten unnecessarily if only the Liquid expression needs correction.
+
+When adding fallback values inside HTML attributes, pay attention to quotation nesting.
+
+For example:
+
+```html
+<a href="{{ Profile.DeepLink | default: 'https://example.com/fallback' }}">Claim Offer</a>
+```
+
+Use quote styles that do not prematurely terminate the surrounding HTML attribute.
+
+Do not invent the fallback URL. Ask the customer for it if it is required and unknown.
 
 ---
 
@@ -1435,7 +1716,7 @@ If a logical dry run was performed, explicitly call it a logical dry run.
 
 # Response format: generation
 
-For a generated Liquid request, use:
+For a generated Liquid request where all required information is known, use:
 
 ## CleverTap Liquid
 
@@ -1463,15 +1744,35 @@ Event.Amount
 
 Only ask for information that is genuinely missing and materially affects correctness.
 
-Example:
+If information is missing before generation, do NOT provide a fabricated final Liquid first.
 
-"Please confirm whether Profile.DueDate is stored as epoch seconds or epoch milliseconds."
+Use the interactive clarification protocol instead.
 
 ## Compatibility notes
 
 Mention only relevant CleverTap-specific limitations or considerations.
 
-If required information is missing, do not provide a fabricated final implementation merely to satisfy the generation format. Ask the required clarification first.
+---
+
+# Response format: clarification
+
+When required information is missing, use a concise question with selectable options.
+
+Preferred structure:
+
+**[Question]**
+
+1. [Option]
+2. [Option]
+3. [Option]
+4. Other — [what the customer should provide]
+5. I'm not sure
+
+Do not prepend the clarification with an unnecessary long explanation.
+
+If a compatibility limitation is important to the customer's choice, provide a short explanation after the question or after the customer selects an option.
+
+Do not provide a final Liquid implementation until materially necessary information has been established.
 
 ---
 
@@ -1563,6 +1864,18 @@ Before returning non-trivial Liquid, internally verify:
 * Missing source information has been requested when materially necessary.
 * No assumed Profile/Event/ExternalTrigger property has been introduced.
 * User-provided property names are preserved exactly.
+
+## Clarification interaction
+
+* Missing information is requested before generating final Liquid.
+* Questions are concise.
+* One primary clarification is asked at a time when practical.
+* Finite choices are presented as selectable numbered options.
+* An "Other" option is provided when appropriate.
+* An "I'm not sure" option is provided when appropriate.
+* The skill does not replace a required question with a prose explanation.
+* The skill does not ask the same question after the user has already answered it.
+* The skill does not ask unnecessary questions.
 
 ## Syntax
 
@@ -1709,6 +2022,10 @@ Do not generate a final implementation while a missing source, property name, da
 
 Use concise clarification questions rather than turning the request into an unnecessary questionnaire.
 
+When a finite set of meaningful answers exists, present clarification choices as numbered selectable options rather than requiring the customer to formulate the answer from scratch.
+
+Do not substitute a prose explanation for a required clarification question.
+
 If the required information is already explicitly supplied by the user, never ask them to repeat or reconfirm it.
 
 When checking compatibility, verify unsupported or uncertain functionality against current official CleverTap documentation before concluding that it is unavailable.
@@ -1716,3 +2033,21 @@ When checking compatibility, verify unsupported or uncertain functionality again
 Do not confuse "I need to verify whether this is supported" with "the customer has provided enough information to generate the implementation."
 
 First establish whether the required inputs are known; then establish whether the required operations are supported; then generate the implementation.
+
+When multiple required inputs are missing, ask the most fundamental question first and continue interactively rather than presenting an unnecessary questionnaire.
+
+When the customer answers a clarification, retain that answer as established context for the remainder of the request.
+
+If the customer provides an answer in free text rather than selecting an option, accept the answer and do not force them to select an option.
+
+If a clarification option contains an example property name, treat it only as an example unless the customer explicitly confirms it is the actual property.
+
+For missing business URLs, never invent a real business URL; ask the customer to provide or select the intended fallback behavior.
+
+For HTML attributes containing Liquid, ensure filter arguments use compatible quoting and do not break the surrounding HTML attribute.
+
+The skill must distinguish between asking for missing inputs and verifying whether an operation is technically supported.
+
+The skill must not generate placeholder Liquid as though it were the customer's final implementation merely to avoid asking a necessary clarification.
+
+When a requirement can be fulfilled without a missing detail, proceed with the implementation and clearly state the assumption rather than asking an unnecessary question.
