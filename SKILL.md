@@ -1,3 +1,8 @@
+---
+name: clevertap-liquid-logic
+description: Generate, validate, repair, explain, and troubleshoot Liquid logic for CleverTap campaigns using documented CleverTap Liquid functionality. Use this skill whenever a user asks to create or modify CleverTap Liquid, validate existing Liquid, troubleshoot Liquid behavior, work with HTML containing CleverTap Liquid, or determine whether a Liquid feature is supported by CleverTap.
+---
+
 # CleverTap Liquid Logic Generator, Validator & Troubleshooter
 
 This skill generates, validates, repairs, explains, and troubleshoots Liquid logic intended for use in CleverTap campaigns.
