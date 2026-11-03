@@ -1,6 +1,6 @@
 ---
 name: clevertap-liquid-logic
-description: Generate, validate, repair, explain, and troubleshoot Liquid logic for CleverTap campaigns using documented CleverTap Liquid functionality. Use this skill whenever a user asks to create or modify CleverTap Liquid, validate existing Liquid, troubleshoot Liquid behavior, work with HTML containing CleverTap Liquid, determine whether a Liquid feature is supported by CleverTap, or convert a business requirement into multi-step mathematical or date/time Liquid logic. Also use it for Linked Content references (Linked.<APIName>.<label>) and for validating AMP4Email templates.
+description: Generate, validate, repair, explain, and troubleshoot Liquid logic for CleverTap campaigns using documented CleverTap Liquid functionality. Use this skill whenever a user asks to create or modify CleverTap Liquid, validate existing Liquid, troubleshoot Liquid behavior, work with HTML containing CleverTap Liquid, determine whether a Liquid feature is supported by CleverTap, or convert a business requirement into multi-step mathematical or date/time Liquid logic. Also use it for Linked Content references (Linked.APIName.label) and for validating AMP4Email templates.
 ---
 
 # CleverTap Liquid Logic
